@@ -3,7 +3,6 @@ const conf = require('./config/defaultConfig')
 const path = require('path')
 const route = require('./helper/route')
 
-
 const server = http.createServer((req, res) => {
     const url = req.url
     const filePath = path.join(conf.root, url)
