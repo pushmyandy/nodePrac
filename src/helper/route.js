@@ -5,8 +5,9 @@ const path = require('path')
 const readdir = promisify(fs.readdir)
 const handlebars = require('handlebars')
 const conf = require('../config/defaultConfig')
-const mime = require('../config/mime')
-const compress = require('../config/compress')
+const mime = require('./mime')
+const compress = require('./compress')
+const range = require('./range')
 
 const tplPath = path.join(__dirname, '../model/dir.tpl')
 const source = fs.readFileSync(tplPath)
@@ -17,9 +18,19 @@ module.exports = async function (req, res, filePath) {
         const stats = await stat(filePath)
         if(stats.isFile()) {
             const contentType = mime(filePath)
-            res.statusCode = 200
             res.setHeader('Content-Type', contentType)
-            const rs = fs.createReadStream(filePath)
+            let rs
+            const {code, start, end} = range(stats.size, req, res)
+            if(code === 200){
+                res.statusCode = 200
+                rs = fs.createReadStream(filePath)
+            } else {
+                res.statusCode = 206
+                rs = fs.createReadStream(filePath, {
+                    start,
+                    end
+                })
+            }
             if (filePath.match(conf.compress)) {
                 res = compress(rs, req, res)
             }
