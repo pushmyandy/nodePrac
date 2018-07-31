@@ -4,21 +4,26 @@ const stat = promisify(fs.stat)
 const path = require('path')
 const readdir = promisify(fs.readdir)
 const handlebars = require('handlebars')
-const conf = require('../config/defaultConfig')
 const mime = require('./mime')
 const compress = require('./compress')
 const range = require('./range')
+const cache = require('./cache')
 
 const tplPath = path.join(__dirname, '../model/dir.tpl')
 const source = fs.readFileSync(tplPath)
 const template = handlebars.compile(source.toString())
 
-module.exports = async function (req, res, filePath) {
+module.exports = async function (req, res, filePath, conf) {
     try {
         const stats = await stat(filePath)
         if(stats.isFile()) {
             const contentType = mime(filePath)
             res.setHeader('Content-Type', contentType)
+            if(cache(stats, req, res)) {
+                res.statusCode = 304
+                res.end()
+                return
+            }
             let rs
             const {code, start, end} = range(stats.size, req, res)
             if(code === 200){
